@@ -64,7 +64,7 @@ def find_device(devices, usage_page, usage):
         if (
             device.usage_page == usage_page
             and device.usage == usage
-            and hasattr(device, 'send_report')
+            and hasattr(device, "send_report")
         ):
             return device
 
@@ -105,13 +105,13 @@ class KeyboardReport(Report):
     def add_key(self, key):
         # Find the first empty slot in the key report, and fill it; drop key if
         # report is full.
-        idx = self.buffer.find(b'\x00', 2)
+        idx = self.buffer.find(b"\x00", 2)
 
         if 0 < idx < _REPORT_SIZE_KEYBOARD:
             self.buffer[idx] = key.code
 
     def remove_key(self, key):
-        idx = self.buffer.find(pack('B', key.code), 2)
+        idx = self.buffer.find(pack("B", key.code), 2)
         if 0 < idx:
             self.buffer[idx] = 0x00
 
@@ -141,12 +141,12 @@ class ConsumerControlReport(Report):
         super().__init__(_REPORT_SIZE_CONSUMER)
 
     def add_cc(self, cc):
-        pack_into('<H', self.buffer, 0, cc.code)
+        pack_into("<H", self.buffer, 0, cc.code)
         self.pending = True
 
     def remove_cc(self):
-        if self.buffer != b'\x00\x00':
-            self.buffer = b'\x00\x00'
+        if self.buffer != b"\x00\x00":
+            self.buffer = b"\x00\x00"
             self.pending = True
 
     def get_action_map(self):
@@ -173,7 +173,7 @@ class PointingDeviceReport(Report):
             self.pending = True
         except IndexError:
             if debug.enabled:
-                debug(axis, ' not supported')
+                debug(axis, " not supported")
 
     def get_action_map(self):
         return {Axis: self.move_axis, MouseKey: self.add_button}
@@ -198,7 +198,7 @@ class SixAxisDeviceReport(Report):
             self.pending = True
         except IndexError:
             if debug.enabled:
-                debug(axis, ' not supported')
+                debug(axis, " not supported")
 
     def get_action_map(self):
         return {SixAxis: self.move_six_axis}
@@ -233,7 +233,6 @@ class AbstractHID:
     def __init__(self):
         self.report_map = {}
         self.device_map = {}
-        self._setup_task = create_task(self.setup, period_ms=100)
 
     def __repr__(self):
         return self.__class__.__name__
@@ -267,9 +266,9 @@ class AbstractHID:
             if debug.enabled:
                 self.show_debug()
 
-        except OSError as e:
+        except (OSError, AttributeError) as e:
             if debug.enabled:
-                debug(type(e), ':', e)
+                debug(type(e), ":", e)
 
     def setup_keyboard_hid(self):
         if device := find_device(self.devices, _USAGE_PAGE_KEYBOARD, _USAGE_KEYBOARD):
@@ -312,10 +311,15 @@ class AbstractHID:
 
     def show_debug(self):
         for report in self.device_map.keys():
-            debug('use ', report.__class__.__name__)
+            debug("use ", report.__class__.__name__)
 
 
 class USBHID(AbstractHID):
+    def __init__(self):
+        super().__init__()
+
+        self._setup_task = create_task(self.setup, period_ms=100)
+
     @property
     def connected(self):
         return supervisor.runtime.usb_connected
@@ -329,8 +333,9 @@ class BLEHID(AbstractHID):
     def __init__(self, ble_name=None):
         super().__init__()
 
+        self._setup_task = create_task(self.setup, period_ms=100)
         self.ble = BLERadio()
-        self.ble.name = ble_name if ble_name else getmount('/').label
+        self.ble.name = ble_name if ble_name else getmount("/").label
         self.ble_connected = False
 
         self.hid = HIDService()
@@ -351,9 +356,9 @@ class BLEHID(AbstractHID):
             self.ble_connected = self.connected
             if debug.enabled:
                 if self.connected:
-                    debug('BLE connected')
+                    debug("BLE connected")
                 else:
-                    debug('BLE disconnected')
+                    debug("BLE disconnected")
 
         if not self.connected:
             # Security-wise this is not right. While you're away someone turns
